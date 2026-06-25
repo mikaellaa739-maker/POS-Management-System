@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  background-color: #f4f6f8; /* Berry's crisp dashboard layout gray */
+  color: #364152;            /* Dark Charcoal text color */
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}

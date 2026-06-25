@@ -1,0 +1,117 @@
+import React from 'react';
+import {
+  ShoppingCart,
+  History,
+  LogOut
+} from 'lucide-react';
+
+import logoSrc from '../assets/vendtrack-logo.png';
+
+export default function Sidebar({ currentPage, setCurrentPage }) {
+  const menus = [
+    {
+      id: 'transaction',
+      name: 'Point of Sale',
+      icon: ShoppingCart
+    },
+    {
+      id: 'history',
+      name: 'Transaction History',
+      icon: History
+    }
+  ];
+
+  return (
+    <aside className="w-72 bg-white border-r border-gray-100 flex flex-col justify-between min-h-screen shadow-sm">
+      
+      {/* Logo Section */}
+      <div>
+        <div className="px-6 py-8 border-b border-gray-100">
+          <div className="flex items-center gap-4">
+            <img
+              src={logoSrc}
+              alt="VendTrack"
+              className="h-16 object-contain"
+            />
+            <div>
+              <h1
+                className="text-xl font-bold leading-none"
+                style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.16)' }}
+              >
+                <span className="text-[#5e35b1]">Vend</span>
+                <span className="ml-1 inline-flex items-center rounded-full bg-[#5e35b1] px-3 py-1 text-sm text-white">
+                  Track
+                </span>
+              </h1>
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="p-4 space-y-2">
+          <p className="text-xs uppercase font-bold tracking-wider text-gray-400 px-3 mb-3">
+            Main Menu
+          </p>
+
+          {menus.map((menu) => {
+            const Icon = menu.icon;
+
+            const isActive =
+              currentPage === menu.id ||
+              (menu.id === 'transaction' &&
+                ['payment', 'receipt'].includes(currentPage)) ||
+              (menu.id === 'history' &&
+                currentPage === 'details');
+
+            return (
+              <button
+                key={menu.id}
+                onClick={() => setCurrentPage(menu.id)}
+                className={`
+                  w-full flex items-center gap-4 px-4 py-3 rounded-xl
+                  transition-all duration-200 font-medium text-sm
+                  ${
+                    isActive
+                      ? 'bg-[#ede7f6] text-[#5e35b1]'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-[#5e35b1]'
+                  }
+                `}
+              >
+                <Icon size={20} className={isActive ? 'text-[#5e35b1]' : 'text-gray-500'} />
+                <span>{menu.name}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* User Section */}
+      <div className="p-5 border-t border-gray-100 bg-gray-50/50">
+        <div className="mb-4 px-2">
+          <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+            Logged in as
+          </p>
+          <p className="text-gray-800 font-semibold text-sm mt-0.5">
+            Alex Diaz
+          </p>
+          <p className="text-xs text-gray-500">
+            Cashier
+          </p>
+        </div>
+
+        <button
+          onClick={() => setCurrentPage('login')}
+          className="
+            w-full flex items-center gap-3
+            px-4 py-2.5 rounded-xl text-sm font-medium
+            text-red-600 hover:bg-red-50
+            transition-all duration-200
+          "
+        >
+          <LogOut size={16} />
+          Logout
+        </button>
+      </div>
+    </aside>
+  );
+}
