@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Eye, Search, Calendar } from 'lucide-react';
 
 export default function HistoryPage({ transactions, onViewDetails }) {

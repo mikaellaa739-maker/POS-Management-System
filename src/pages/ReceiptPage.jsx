@@ -1,4 +1,3 @@
-import React from 'react';
 import { CheckCircle, Printer, Download, RefreshCw } from 'lucide-react';
 
 export default function ReceiptPage({ receipt, onNewTransaction }) {

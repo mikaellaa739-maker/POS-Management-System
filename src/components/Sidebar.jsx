@@ -1,13 +1,12 @@
-import React from 'react';
 import {
   ShoppingCart,
   History,
   LogOut
 } from 'lucide-react';
 
-import logoSrc from '../assets/vendtrack-logo.png';
+import logoSrc from '../assets/OpistockLogo.png';
 
-export default function Sidebar({ currentPage, setCurrentPage }) {
+export default function Sidebar({ currentPage, setCurrentPage, currentUser, setCurrentUser }) {
   const menus = [
     {
       id: 'transaction',
@@ -30,7 +29,7 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
           <div className="flex items-center gap-4">
             <img
               src={logoSrc}
-              alt="VendTrack"
+              alt="OpiStock"
               className="h-16 object-contain"
             />
             <div>
@@ -38,9 +37,9 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
                 className="text-xl font-bold leading-none"
                 style={{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.16)' }}
               >
-                <span className="text-[#5e35b1]">Vend</span>
+                <span className="text-[#5e35b1]">Opi</span>
                 <span className="ml-1 inline-flex items-center rounded-full bg-[#5e35b1] px-3 py-1 text-sm text-white">
-                  Track
+                  Stock
                 </span>
               </h1>
             </div>
@@ -92,15 +91,18 @@ export default function Sidebar({ currentPage, setCurrentPage }) {
             Logged in as
           </p>
           <p className="text-gray-800 font-semibold text-sm mt-0.5">
-            Alex Diaz
+            {currentUser?.firstName || 'Employee'}
           </p>
           <p className="text-xs text-gray-500">
-            Cashier
+            {currentUser?.employeeId || 'No employee ID'}
           </p>
         </div>
 
         <button
-          onClick={() => setCurrentPage('login')}
+          onClick={() => {
+            setCurrentUser(null);
+            setCurrentPage('login');
+          }}
           className="
             w-full flex items-center gap-3
             px-4 py-2.5 rounded-xl text-sm font-medium
