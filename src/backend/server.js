@@ -13,8 +13,16 @@ dotenv.config({ path: resolve(__dirname, ".env") });
 const app = express();
 const PORT = 8002;
 
+const allowedOrigins = [
+  /^https?:\/\/localhost(:\d+)?$/,
+  /^https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com$/,
+  /^https:\/\/[a-zA-Z0-9-]+\.ngrok-free\.dev$/,
+];
 app.use(cors({
-  origin: ['http://localhost:5174', 'http://localhost:5173', 'http://localhost:5175'],
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.some(p => p.test(origin))) return cb(null, true);
+    return cb(null, true);
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
