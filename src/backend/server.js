@@ -13,6 +13,10 @@ dotenv.config({ path: resolve(__dirname, ".env") });
 const app = express();
 const PORT = 8002;
 
+// Serve built frontend (dist/) — for production via ngrok HTTPS
+const distPath = resolve(__dirname, '../../dist');
+app.use(express.static(distPath));
+
 const allowedOrigins = [
   /^https?:\/\/localhost(:\d+)?$/,
   /^https:\/\/[a-zA-Z0-9-]+\.serveousercontent\.com$/,
@@ -387,6 +391,13 @@ app.get('/api/sales/products', async (req, res) => {
 // GET /api/health — health check for other modules
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', module: 'pos', port: PORT, timestamp: new Date().toISOString() });
+});
+
+// Catch-all: serve index.html for client-side routing (React Router)
+// Only for non-API routes
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  res.sendFile(resolve(distPath, 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
