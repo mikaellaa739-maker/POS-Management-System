@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import EmailVerificationPage from './pages/EmailVerificationPage';
@@ -9,28 +9,49 @@ import PaymentPage from './pages/PaymentPage';
 import ReceiptPage from './pages/ReceiptPage';
 import HistoryPage from './pages/HistoryPage';
 import DetailsPage from './pages/DetailsPage';
-
-const starterProducts = [
-  { id: 'SKU-001', name: 'Bottled Water', price: 20, stock: 80 },
-  { id: 'SKU-002', name: 'Instant Coffee', price: 15, stock: 120 },
-  { id: 'SKU-003', name: 'Chocolate Bar', price: 35, stock: 45 },
-  { id: 'SKU-004', name: 'Potato Chips', price: 42, stock: 60 },
-  { id: 'SKU-005', name: 'Canned Tuna', price: 58, stock: 32 },
-  { id: 'SKU-006', name: 'Rice 1kg', price: 65, stock: 25 },
-];
+import { apiUrl } from './lib/api';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('login');
   const [currentUser, setCurrentUser] = useState(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
-  const [products, setProducts] = useState(starterProducts);
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [currentReceipt, setCurrentReceipt] = useState(null);
   const [selectedReceiptNo, setSelectedReceiptNo] = useState('');
 
+  const fetchProducts = useCallback(async () => {
+    try {
+      const endpoint = apiUrl('/api/sales/products');
+      const res = await fetch(endpoint);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setProducts(data);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch products from backend, using hardcoded fallback', e);
+    }
+    // Fallback
+    setProducts([
+      { id: 'SKU-001', name: 'Bottled Water', price: 20, stock: 80 },
+      { id: 'SKU-002', name: 'Instant Coffee', price: 15, stock: 120 },
+      { id: 'SKU-003', name: 'Chocolate Bar', price: 35, stock: 45 },
+      { id: 'SKU-004', name: 'Potato Chips', price: 42, stock: 60 },
+      { id: 'SKU-005', name: 'Canned Tuna', price: 58, stock: 32 },
+      { id: 'SKU-006', name: 'Rice 1kg', price: 65, stock: 25 },
+    ]);
+  }, []);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
   const selectedTransaction = useMemo(
-    () => transactions.find((transaction) => transaction.receiptNo === selectedReceiptNo) || null,
+    () => transactions.find((t) => t.receiptNo === selectedReceiptNo) || null,
     [selectedReceiptNo, transactions]
   );
 

@@ -71,6 +71,7 @@ export default function PaymentPage({
           items_count: cart.reduce((acc, item) => acc + item.qty, 0),
           items: cart.map((item) => ({
             product_id: item.id,
+            product_name: item.name,
             qty: item.qty,
             price: item.price,
           })),

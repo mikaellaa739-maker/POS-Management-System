@@ -137,8 +137,8 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
       const data = await response.json();
 
       if (response.ok) {
-        setPendingVerificationEmail(formData.email.trim().toLowerCase());
-        setCurrentPage('verify');
+        setStatusMessage('Account created successfully! You can now log in.');
+        setTimeout(() => setCurrentPage('login'), 1500);
       } else {
         setStatusMessage(data.message || 'Registration failed.');
       }
