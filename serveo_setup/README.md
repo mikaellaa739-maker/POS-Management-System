@@ -1,5 +1,10 @@
 # Serveo Tunnel Setup — M2 POS Frontend
 
+## Backend tunnel (ngrok) — port 8002
+```bash
+ngrok http 8002
+```
+
 ## What it does
 Creates a public URL for `localhost:5174` (POS frontend) so other modules can access it via the internet (no same-WiFi needed).
 
