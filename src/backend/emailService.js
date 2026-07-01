@@ -22,47 +22,63 @@ const ensureEmailConfig = () => {
   }
 };
 
-export const sendVerificationEmail = async (email, code) => {
+export const sendVerificationEmail = async (email, code, firstName = 'User') => {
   const html = `
-    <div style="font-family: Arial; padding: 20px;">
-      <h2>VendTrack System</h2>
-      <p>Dear <b>${email}</b>,</p>
-      <p>Thank you for signing up with our VendTrack System.</p>
-      <p>Please use the following verification code to complete your registration process. This code will expire in 10 minutes.</p>
-      <h1 style="letter-spacing: 4px;">${code}</h1>
-      <p>If you did not request this code, please ignore this email or contact our support team if you have concerns.</p>
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;">
+      <h2>OpiStock System</h2>
+      <p>Hello <b>${firstName}</b>,</p>
+      <p>Thank you for registering with OpiStock.</p>
+      <p>Please verify your email address using the code below:</p>
+      <h1 style="letter-spacing: 4px; color: #5e35b1; background-color: #f8f7ff; padding: 10px 20px; display: inline-block; border-radius: 8px;">${code}</h1>
+      <p>This code will expire in 10 minutes.</p>
+      <p>If you did not create an account, please ignore this email.</p>
       <br/>
-      <p>Best regards,<br/>The VendTrack Team</p>
+      <p>Best regards,<br/>The OpiStock Team</p>
     </div>
   `;
+
+  const text = `Hello ${firstName},
+
+Thank you for registering with OpiStock.
+
+Please verify your email address using the code below:
+${code}
+
+This code will expire in 10 minutes.
+
+If you did not create an account, please ignore this email.
+
+Best regards,
+The OpiStock Team`;
 
   ensureEmailConfig();
   await transporter.verify();
   await transporter.sendMail({
-    from: `"VendTrack System" <${process.env.EMAIL_USER}>`,
+    from: `"OpiStock Team" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Email Verification Code',
+    text,
     html,
   });
 };
 
 export const sendEmployeeIdEmail = async (email, employeeId) => {
   const html = `
-    <div style="font-family: Arial; padding: 20px;">
-      <h2>Welcome to VendTrack</h2>
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;">
+      <h2>Welcome to OpiStock</h2>
       <p>Dear <b>${email}</b>,</p>
       <p>Your email has been successfully verified.</p>
-      <p>Your employee ID is: <b>${employeeId}</b></p>
+      <p>Your employee ID is: <b style="color: #5e35b1; font-size: 1.2em;">${employeeId}</b></p>
       <p>You may now continue to the transaction dashboard.</p>
       <br/>
-      <p>Best regards,<br/>The VendTrack Team</p>
+      <p>Best regards,<br/>The OpiStock Team</p>
     </div>
   `;
 
   ensureEmailConfig();
   await transporter.verify();
   await transporter.sendMail({
-    from: `"VendTrack System" <${process.env.EMAIL_USER}>`,
+    from: `"OpiStock Team" <${process.env.EMAIL_USER}>`,
     to: email,
     subject: 'Your Employee ID',
     html,
@@ -71,11 +87,11 @@ export const sendEmployeeIdEmail = async (email, employeeId) => {
 
 export const sendPasswordRecoveryEmail = async (email, code) => {
   const html = `
-    <div style="font-family: Arial; padding: 20px;">
+    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; line-height: 1.6;">
       <p>Hi there,</p>
       <p>We received a request to reset the password for your account.</p>
       <p>To choose a new password, use the code below:</p>
-      <h1 style="letter-spacing: 4px;">${code}</h1>
+      <h1 style="letter-spacing: 4px; color: #5e35b1; background-color: #f8f7ff; padding: 10px 20px; display: inline-block; border-radius: 8px;">${code}</h1>
       <p>If you didn't request this change, you can safely ignore this email&mdash;your password will remain secure. This code will expire in 10 minutes.</p>
       <br/>
       <p>Best regards,</p>

@@ -117,6 +117,8 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
     setIsSubmitting(true);
     setStatusMessage('');
 
+    const targetEmail = formData.email.trim().toLowerCase();
+
     try {
       const response = await fetch(apiUrl('/api/auth/register'), {
         method: 'POST',
@@ -128,7 +130,7 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
           lastName: formData.lastName.trim(),
           contactNumber: formData.contactNumber.trim(),
           address: formData.address.trim(),
-          email: formData.email.trim().toLowerCase(),
+          email: targetEmail,
           password: formData.password,
           confirmPassword: formData.confirmPassword,
         }),
@@ -137,8 +139,10 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
       const data = await response.json();
 
       if (response.ok) {
-        setStatusMessage('Account created successfully! You can now log in.');
-        setTimeout(() => setCurrentPage('login'), 1500);
+        setPendingVerificationEmail(targetEmail);
+        // FIXED: Changed confirmation context status banner text
+        setStatusMessage('Verification code sent! Please verify your identity.');
+        setTimeout(() => setCurrentPage('verify'), 1500);
       } else {
         setStatusMessage(data.message || 'Registration failed.');
       }
@@ -154,13 +158,13 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
       <div className="mx-auto flex min-h-screen max-w-5xl items-center justify-center">
         <div className="w-full rounded-[32px] border border-gray-100 bg-white p-8 shadow-[0_20px_70px_rgba(94,53,177,0.16)] sm:p-10 lg:p-12">
           <div className="mb-8 text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#5e35b1]">Create Account</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#5e35b1]">Identity Verification</p>
             <h2 className="mt-2 text-3xl font-bold text-gray-800">Register your account</h2>
             <p className="mt-2 text-sm text-gray-500">Fill in your details to get started.</p>
           </div>
 
           {statusMessage && (
-            <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className={`mb-4 rounded-2xl border px-4 py-3 text-sm ${statusMessage.includes('sent') ? 'border-green-200 bg-green-50 text-green-600' : 'border-red-200 bg-red-50 text-red-600'}`}>
               {statusMessage}
             </div>
           )}
@@ -301,7 +305,7 @@ export default function RegisterPage({ setCurrentPage, setPendingVerificationEma
                 disabled={isSubmitting}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#5e35b1] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[#5e35b1]/20 transition hover:bg-[#4a148c] disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSubmitting ? 'Creating account...' : 'Create Account'}
+                {isSubmitting ? 'Sending verification code...' : 'Get Verification Code'}
                 <ArrowRight size={16} />
               </button>
             </div>

@@ -9,8 +9,15 @@ export default function EmailVerificationPage({ email, setCurrentPage }) {
 
   const handleVerify = async (event) => {
     event.preventDefault();
+    
     if (!email) {
       setStatusMessage('No email was provided for verification.');
+      return;
+    }
+
+    // FIX: Stops partial/empty inputs from hitting the API or crashing/bypassing
+    if (code.trim().length !== 6) {
+      setStatusMessage('Please enter a valid 6-digit verification code.');
       return;
     }
 
@@ -21,14 +28,17 @@ export default function EmailVerificationPage({ email, setCurrentPage }) {
       const response = await fetch(apiUrl('/api/auth/verify'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email, code: code.trim() }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setStatusMessage('Email verified successfully.');
-        setCurrentPage('login');
+        setStatusMessage('Email verified successfully! Redirecting to login...');
+        // FIX: Gives the user time to see the successful message before jumping pages
+        setTimeout(() => {
+          setCurrentPage('login');
+        }, 2000);
       } else {
         setStatusMessage(data.message || 'Verification failed.');
       }

@@ -92,6 +92,7 @@ router.post('/register', async (req, res) => {
   const code = generateCode();
   const expiresAt = Date.now() + 10 * 60 * 1000;
   const employeeId = createEmployeeId();
+  const firstName = String(req.body.firstName || '').trim();
 
   verificationStore.set(email, {
     code,
@@ -104,11 +105,14 @@ router.post('/register', async (req, res) => {
   });
 
   try {
-    await sendVerificationEmail(email, code);
-    res.json({ message: 'Verification code sent. Please check your email.', email, code });
+    await sendVerificationEmail(email, code, firstName);
+    // FIXED: Changed message context to reflect code generation state
+    res.json({ message: 'Verification code sent. Please check your email.', email });
   } catch (error) {
-    console.error('Verification email error:', error);
-    res.json({ message: 'Verification code generated. Please use the code shown in the app.', email, code });
+    console.error('Verification email error details:', error);
+    // FIXED: Force an error status code so registration halts if email transport configuration breaks
+    verificationStore.delete(email);
+    res.status(500).json({ message: 'Failed to send verification email. Please check your internet or configuration.' });
   }
 });
 
@@ -119,16 +123,16 @@ router.post('/verify', async (req, res) => {
   const record = verificationStore.get(email);
 
   if (!record) {
-    return res.status(400).json({ message: 'No verification found.' });
+    return res.status(400).json({ message: 'No registration information found.' });
   }
 
   if (Date.now() > record.expiresAt) {
     verificationStore.delete(email);
-    return res.status(400).json({ message: 'Code expired.' });
+    return res.status(400).json({ message: 'Verification code expired.' });
   }
 
   if (record.code !== code) {
-    return res.status(400).json({ message: 'Invalid code.' });
+    return res.status(400).json({ message: 'Invalid verification code.' });
   }
 
   verificationStore.delete(email);
@@ -146,7 +150,8 @@ router.post('/verify', async (req, res) => {
     console.error('Employee ID email error:', error);
   }
 
-  res.json({ message: 'Email verified successfully.', employeeId: verifiedUser.employeeId });
+  // FIXED: Account is officially created and saved to memory here
+  res.json({ message: 'Account created and verified successfully.', employeeId: verifiedUser.employeeId });
 });
 
 router.post('/login', (req, res) => {
@@ -204,7 +209,7 @@ router.post('/forgot-password', async (req, res) => {
     res.json({ message: 'Recovery code sent. Please check your email.' });
   } catch (error) {
     console.error('Password recovery email error:', error);
-    res.json({ message: 'Recovery code generated. Please use the code shown in the app.', code });
+    res.status(500).json({ message: 'Failed to send recovery email.' });
   }
 });
 

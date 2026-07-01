@@ -5,6 +5,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import bcrypt from "bcryptjs";
 
+
+// IMPORT EMAIL SERVICE HOOKS Safely
+import { sendVerificationEmail } from "./emailService.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -52,25 +56,13 @@ async function getDb() {
   return db;
 }
 
-async function initSchema() {
-  const pool = await getDb();
-  const fs = await import('fs');
-  const schema = fs.readFileSync(resolve(__dirname, 'schema.sql'), 'utf8');
-  const statements = schema.split(';').filter(s => s.trim());
-  for (const stmt of statements) {
-    try {
-      await pool.query(stmt);
-    } catch (e) {
-      // Skip errors for duplicate inserts
-      if (!e.message.includes('Duplicate')) console.error('Schema init error:', e.message);
-    }
-  }
-  console.log('POS Database schema initialized');
-}
 
-initSchema();
 
-// ========= AUTH ROUTES =========
+// ========= AUTH DATA STORAGE & VALIDATIONS =========
+
+// Verification memory store for registering users before they hit the DB
+const registrationVerificationStore = new Map();
+const recoveryStore = new Map();
 
 function validateEmail(v) {
   v = (v || '').trim();
@@ -122,19 +114,69 @@ app.post('/api/auth/register', async (req, res) => {
     const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email.toLowerCase()]);
     if (existing.length > 0) return res.status(409).json({ message: 'Email already registered' });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const employeeId = `EID${String(Math.floor(100000 + Math.random() * 900000))}`;
+    // Generate numeric 6-digit registration verification pin
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes validation life
 
-    await pool.query(
-      `INSERT INTO users (employee_id, first_name, middle_name, last_name, email, password, contact_number, address, role)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CASHIER')`,
-      [employeeId, firstName, middleName || '', lastName, email.toLowerCase(), hashedPassword, contactNumber, address]
-    );
+    // Secure payload in transient memory pending activation
+    registrationVerificationStore.set(email.toLowerCase().trim(), {
+      code,
+      expiresAt,
+      userData: { firstName, middleName, lastName, email, password, contactNumber, address }
+    });
 
-    res.json({ message: 'Registration successful', employeeId });
+    // Fire verification email using Nodemailer
+    try {
+      await sendVerificationEmail(email.toLowerCase().trim(), code, firstName);
+      res.json({ message: 'Verification code sent. Please check your email.', email });
+    } catch (emailErr) {
+      console.error('Email send failure detailed logs:', emailErr);
+      registrationVerificationStore.delete(email.toLowerCase().trim());
+      return res.status(500).json({ message: 'Failed to dispatch verification email. Verify your server configuration variables.' });
+    }
+
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/auth/verify — Now securely processes memory queue records into MySQL
+app.post('/api/auth/verify', async (req, res) => {
+  try {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const code = String(req.body.code || '').trim();
+
+    if (!email || !code) {
+      return res.status(400).json({ message: 'Email and verification digits are required.' });
+    }
+
+    const record = registrationVerificationStore.get(email);
+    if (!record) return res.status(400).json({ message: 'No current registration data found.' });
+    if (Date.now() > record.expiresAt) {
+      registrationVerificationStore.delete(email);
+      return res.status(400).json({ message: 'Verification code expired.' });
+    }
+    if (record.code !== code) return res.status(400).json({ message: 'Invalid verification code.' });
+
+    // Code is validated! Pop from transient memory queue
+    registrationVerificationStore.delete(email);
+    const { firstName, middleName, lastName, password, contactNumber, address } = record.userData;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const employeeId = `EID${String(Math.floor(100000 + Math.random() * 900000))}`;
+
+    const pool = await getDb();
+    await pool.query(
+      `INSERT INTO users (employee_id, first_name, middle_name, last_name, email, password, contact_number, address, role)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'CASHIER')`,
+      [employeeId, firstName, middleName || '', lastName, email, hashedPassword, contactNumber, address]
+    );
+
+    res.json({ message: 'Email verified successfully and account created.', employeeId });
+  } catch (err) {
+    console.error('Verification operational branch error:', err);
+    res.status(500).json({ message: 'Internal server error processing database insertion.' });
   }
 });
 
@@ -171,13 +213,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// POST /api/auth/verify — always succeeds (registration is direct now)
-app.post('/api/auth/verify', (req, res) => {
-  res.json({ message: 'Email verified successfully.' });
-});
-
 // POST /api/auth/forgot-password
-const recoveryStore = new Map();
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     const email = String(req.body.email || '').trim().toLowerCase();
@@ -327,7 +363,6 @@ app.post('/api/sales-orders', async (req, res) => {
     try {
       await conn.beginTransaction();
 
-      // Insert sales order
       const itemsCount = items.reduce((sum, i) => sum + i.qty, 0);
       await conn.query(
         `INSERT INTO sales_orders (receipt_no, cashier_id, cashier_name, total, paid, change_given, payment_method, items_count, status)
@@ -335,7 +370,6 @@ app.post('/api/sales-orders', async (req, res) => {
         [receipt_no, cashier_id || 'UNKNOWN', cashier_name || '', total || 0, paid || 0, change_given || 0, payment_method || 'Cash', itemsCount]
       );
 
-      // Insert order items
       for (const item of items) {
         const subtotal = item.qty * item.price;
         await conn.query(
@@ -347,7 +381,6 @@ app.post('/api/sales-orders', async (req, res) => {
 
       await conn.commit();
 
-      // Call Inventory API to deduct stock (async — don't block response)
       try {
         const { deductProductStock } = await import('./inventoryClient.js');
         for (const item of items) {
@@ -393,8 +426,6 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', module: 'pos', port: PORT, timestamp: new Date().toISOString() });
 });
 
-// Catch-all: serve index.html for client-side routing (React Router)
-// Only for non-API routes
 app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   res.sendFile(resolve(distPath, 'index.html'));
